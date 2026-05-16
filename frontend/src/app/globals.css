@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-bg: #05050f;
+  --color-brand-card: #131127;
+  --color-brand-card-hover: #1a1736;
+  --color-brand-border: #2d2757;
+  
+  --color-brand-purple: #7c3aed;
+  --color-brand-purple-dim: #5b21b6;
+  --color-brand-purple-glow: #a78bfa;
+  
+  --color-brand-blue: #3b82f6;
+  --color-brand-blue-glow: #93c5fd;
+}
+
+@layer base {
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #e2e8f0;
+    background-color: var(--color-brand-bg);
+  }
+}
+
+@layer utilities {
+  .glow-purple {
+    box-shadow: 0 0 15px var(--color-brand-purple-dim);
+  }
+  
+  .glow-blue {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+  }
+  
+  .text-glow-purple {
+    text-shadow: 0 0 8px var(--color-brand-purple-glow);
+  }
+  
+  .text-glow-blue {
+    text-shadow: 0 0 8px var(--color-brand-blue-glow);
+  }
+
+  /* Glassmorphism utility */
+  .glass-panel {
+    background: rgba(19, 17, 39, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(45, 39, 87, 0.5);
+  }
+
+  /* Markdown Typography for the new aesthetic */
+  .custom-markdown-container h3 {
+    color: #f8fafc;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.025em;
+  }
+  
+  .custom-markdown-container p {
+    margin-bottom: 1rem;
+    color: #94a3b8;
+    line-height: 1.6;
+  }
+  
+  .custom-markdown-container ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin-bottom: 1.25rem;
+    color: #cbd5e1;
+  }
+  
+  .custom-markdown-container li {
+    margin-bottom: 0.5rem;
+    padding-left: 1.25rem;
+    position: relative;
+  }
+
+  .custom-markdown-container li::before {
+    content: "•";
+    color: var(--color-brand-purple);
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+  }
+  
+  .custom-markdown-container strong {
+    color: #f1f5f9;
+    font-weight: 600;
+  }
+}

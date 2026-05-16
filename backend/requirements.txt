@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+sqlalchemy
+websockets
+google-genai
+python-dotenv
