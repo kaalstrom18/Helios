@@ -153,13 +153,11 @@ async def websocket_telemetry(websocket: WebSocket, machine_id: str, token: str 
         await websocket.close(code=1008)
         return
         
-    from auth import supabase
-    res = supabase.auth.get_user(token)
-    if not res or not res.user:
+    from auth import verify_token
+    user = await verify_token(token)
+    if not user:
         await websocket.close(code=1008)
         return
-        
-    user = res.user
     
     # Verify machine belongs to user
     machine = db.query(Machine).filter(Machine.machine_id == machine_id, Machine.user_id == user.id).first()
