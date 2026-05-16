@@ -4,7 +4,7 @@ import platform
 from telemetry import get_telemetry, get_recent_logs
 
 # Change this to your deployed Render URL in production
-API_URL = "http://127.0.0.1:8001/api/telemetry"
+API_URL = "https://helios-ui43.onrender.com"
 SYNC_INTERVAL = 5 # Sync every 5 seconds for the MVP
 
 def run_connector():
