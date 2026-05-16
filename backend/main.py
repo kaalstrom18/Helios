@@ -1,13 +1,16 @@
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException
+import secrets
+from datetime import datetime, timedelta, timezone
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
 
 from database import engine, Base, get_db
-from models import TelemetrySnapshot
+from models import TelemetrySnapshot, Machine, PairingCode
 from ai import troubleshoot_issue, recommend_build
+from auth import get_current_user
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
@@ -57,8 +60,73 @@ class UpgradeRequest(BaseModel):
     budget: str
     workload: str
 
+class PairingGenerateResponse(BaseModel):
+    code: str
+    expires_in_minutes: int
+
+class PairingLinkRequest(BaseModel):
+    pair_code: str
+    machine_id: str
+    hostname: str
+
+@app.post("/api/pairing/generate", response_model=PairingGenerateResponse)
+async def generate_pairing_code(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    code = secrets.token_hex(4).upper() # 8 chars like ABCD1234
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+    
+    db_code = PairingCode(user_id=user.id, code=code, expires_at=expires_at)
+    db.add(db_code)
+    db.commit()
+    
+    return {"code": code, "expires_in_minutes": 10}
+
+@app.post("/api/pairing/link")
+async def link_machine(request: PairingLinkRequest, db: Session = Depends(get_db)):
+    db_code = db.query(PairingCode).filter(
+        PairingCode.code == request.pair_code,
+        PairingCode.is_used == False,
+        PairingCode.expires_at > datetime.now(timezone.utc)
+    ).first()
+    
+    if not db_code:
+        raise HTTPException(status_code=400, detail="Invalid or expired pairing code")
+        
+    db_code.is_used = True
+    
+    # Check if machine already exists, if so update it, else create
+    machine = db.query(Machine).filter(Machine.machine_id == request.machine_id).first()
+    machine_token = secrets.token_urlsafe(32)
+    
+    if machine:
+        machine.user_id = db_code.user_id
+        machine.hostname = request.hostname
+        machine.machine_token = machine_token
+    else:
+        machine = Machine(
+            user_id=db_code.user_id,
+            machine_id=request.machine_id,
+            hostname=request.hostname,
+            machine_token=machine_token
+        )
+        db.add(machine)
+        
+    db.commit()
+    
+    return {"machine_token": machine_token, "status": "linked"}
+
 @app.post("/api/telemetry")
-async def receive_telemetry(payload: TelemetryPayload, db: Session = Depends(get_db)):
+async def receive_telemetry(payload: TelemetryPayload, machine_token: str = Header(None, alias="Machine-Token"), db: Session = Depends(get_db)):
+    if not machine_token:
+        raise HTTPException(status_code=401, detail="Machine-Token header missing")
+        
+    machine = db.query(Machine).filter(
+        Machine.machine_id == payload.machine_id,
+        Machine.machine_token == machine_token
+    ).first()
+    
+    if not machine:
+        raise HTTPException(status_code=401, detail="Invalid Machine-Token or machine_id")
+
     # Store in database
     db_snapshot = TelemetrySnapshot(
         machine_id=payload.machine_id,
@@ -74,12 +142,31 @@ async def receive_telemetry(payload: TelemetryPayload, db: Session = Depends(get
     return {"status": "success"}
 
 @app.get("/api/machines")
-async def get_machines(db: Session = Depends(get_db)):
-    machines = db.query(TelemetrySnapshot.machine_id).distinct().all()
-    return {"machines": [m[0] for m in machines]}
+async def get_machines(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    machines = db.query(Machine).filter(Machine.user_id == user.id).all()
+    return {"machines": [m.machine_id for m in machines], "details": [{"id": m.machine_id, "hostname": m.hostname} for m in machines]}
 
 @app.websocket("/ws/telemetry/{machine_id}")
-async def websocket_telemetry(websocket: WebSocket, machine_id: str, db: Session = Depends(get_db)):
+async def websocket_telemetry(websocket: WebSocket, machine_id: str, token: str = None, db: Session = Depends(get_db)):
+    # Verify user token for websocket
+    if not token:
+        await websocket.close(code=1008)
+        return
+        
+    from auth import supabase
+    res = supabase.auth.get_user(token)
+    if not res or not res.user:
+        await websocket.close(code=1008)
+        return
+        
+    user = res.user
+    
+    # Verify machine belongs to user
+    machine = db.query(Machine).filter(Machine.machine_id == machine_id, Machine.user_id == user.id).first()
+    if not machine:
+        await websocket.close(code=1008)
+        return
+
     await manager.connect(websocket, machine_id)
     
     # Send latest telemetry upon connection if exists

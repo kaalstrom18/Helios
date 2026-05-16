@@ -8,6 +8,8 @@ import BuildAdvisor from "@/components/BuildAdvisor";
 import RamInfographic from "@/components/RamInfographic";
 import SystemSpecsInfographic from "@/components/SystemSpecsInfographic";
 import PrivacyPopup from "@/components/PrivacyPopup";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 interface TelemetryData {
   timestamp: number;
@@ -23,21 +25,72 @@ export default function Home() {
   const [connected, setConnected] = useState(false);
   const [view, setView] = useState<ViewState>("dashboard");
   const [machineId, setMachineId] = useState<string | null>(null);
+  const [machines, setMachines] = useState<{id: string, hostname: string}[]>([]);
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push('/login');
+      } else {
+        setSession(session);
+        setLoading(false);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) router.push('/login');
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);  useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchMachine = async () => {
+      if (!session) return;
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://helios-ui43.onrender.com";
-        const res = await fetch(`${apiUrl}/api/machines`);
+        const res = await fetch(`${apiUrl}/api/machines`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
         const data = await res.json();
         if (data.machines && data.machines.length > 0) {
-          setMachineId(data.machines[0]);
+          setMachines(data.details || []);
+          if (!machineId) setMachineId(data.machines[0]);
         }
       } catch (err) {
         console.error("Failed to fetch machines:", err);
       }
     };
+
+    const handlePairing = async () => {
+      if (!session) return;
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://helios-ui43.onrender.com";
+        const res = await fetch(`${apiUrl}/api/pairing/generate`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
+        const data = await res.json();
+        if (data.code) {
+          setPairingCode(data.code);
+        }
+      } catch (err) {
+        console.error("Failed to generate pairing code:", err);
+      }
+    };
+    
+    // Attach pair function to window so we can trigger it from UI below
+    (window as any).triggerPairing = handlePairing;
     if (!machineId) {
       fetchMachine();
       interval = setInterval(fetchMachine, 5000);
@@ -48,12 +101,12 @@ export default function Home() {
   }, [machineId]);
 
   useEffect(() => {
-    if (!machineId) return;
+    if (!machineId || !session) return;
 
     // Use NEXT_PUBLIC_WS_URL for production (e.g. wss://api.helios.com/ws/telemetry)
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL 
-      ? `${process.env.NEXT_PUBLIC_WS_URL}/${machineId}`
-      : `wss://helios-ui43.onrender.com/ws/telemetry/${machineId}`;
+      ? `${process.env.NEXT_PUBLIC_WS_URL}/${machineId}?token=${session.access_token}`
+      : `wss://helios-ui43.onrender.com/ws/telemetry/${machineId}?token=${session.access_token}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => setConnected(true);
@@ -95,12 +148,69 @@ export default function Home() {
             >
               ⬇ Download Connector
             </a>
+            <button 
+              onClick={() => supabase.auth.signOut()}
+              className="glass-panel px-4 py-2 rounded-full text-xs font-semibold text-[#ef4444] tracking-wide hover:bg-[#ef4444]/10 transition-colors border border-[#ef4444]/30"
+            >
+              Sign Out
+            </button>
             <div className="flex items-center gap-3 glass-panel px-4 py-2 rounded-full">
               <div className={`w-2.5 h-2.5 rounded-full ${connected ? 'bg-[#10b981] shadow-[0_0_10px_#10b981]' : 'bg-[#ef4444] shadow-[0_0_10px_#ef4444]'}`}></div>
               <span className="text-xs font-semibold text-[#cbd5e1] tracking-wide">{connected ? "SYSTEM ONLINE" : "OFFLINE"}</span>
             </div>
           </div>
         </header>
+
+        {pairingCode && (
+          <div className="mb-6 p-4 glass-panel border border-[var(--color-brand-purple)]/50 rounded-xl relative flex justify-between items-center bg-[var(--color-brand-purple)]/10">
+            <div>
+              <h3 className="text-white font-semibold text-sm">Pair New Device</h3>
+              <p className="text-xs text-[#94a3b8] mt-1">Run the Helios Connector on your device and enter this code:</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="bg-black/40 px-4 py-2 rounded-lg border border-[var(--color-brand-purple)] text-[var(--color-brand-purple-glow)] font-mono text-xl tracking-widest font-bold">
+                {pairingCode}
+              </div>
+              <button 
+                onClick={() => setPairingCode(null)}
+                className="text-[#94a3b8] hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {machines.length > 0 ? (
+          <div className="mb-6 flex gap-2">
+            {machines.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setMachineId(m.id)}
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all border ${machineId === m.id ? 'bg-[var(--color-brand-purple)]/20 text-white border-[var(--color-brand-purple)]' : 'glass-panel text-[#94a3b8] border-transparent hover:text-white'}`}
+              >
+                {m.hostname || m.id}
+              </button>
+            ))}
+            <button
+              onClick={() => (window as any).triggerPairing?.()}
+              className="px-4 py-2 rounded-lg text-xs font-semibold transition-all glass-panel text-[#94a3b8] border-transparent hover:text-white flex items-center gap-2"
+            >
+              + Pair New Device
+            </button>
+          </div>
+        ) : (
+          <div className="mb-6 text-center py-12 glass-panel rounded-xl border border-dashed border-[#475569]">
+            <h3 className="text-white font-medium mb-2">No devices connected</h3>
+            <p className="text-sm text-[#94a3b8] mb-4">You need to pair a machine to see telemetry.</p>
+            <button
+              onClick={() => (window as any).triggerPairing?.()}
+              className="bg-[var(--color-brand-purple)] hover:bg-[#a855f7] text-white px-6 py-2 rounded-full text-sm font-semibold transition-colors"
+            >
+              Pair New Device
+            </button>
+          </div>
+        )}
 
         <Navigation currentView={view} onViewChange={setView} />
 
