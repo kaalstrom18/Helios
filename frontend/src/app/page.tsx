@@ -28,7 +28,7 @@ export default function Home() {
     let interval: NodeJS.Timeout;
     const fetchMachine = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://helios-ui43.onrender.com";
         const res = await fetch(`${apiUrl}/api/machines`);
         const data = await res.json();
         if (data.machines && data.machines.length > 0) {
@@ -53,7 +53,7 @@ export default function Home() {
     // Use NEXT_PUBLIC_WS_URL for production (e.g. wss://api.helios.com/ws/telemetry)
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL 
       ? `${process.env.NEXT_PUBLIC_WS_URL}/${machineId}`
-      : `ws://127.0.0.1:8001/ws/telemetry/${machineId}`;
+      : `wss://helios-ui43.onrender.com/ws/telemetry/${machineId}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => setConnected(true);
