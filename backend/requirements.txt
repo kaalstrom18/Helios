@@ -6,3 +6,4 @@ google-genai
 python-dotenv
 supabase
 PyJWT
+psycopg2-binary
