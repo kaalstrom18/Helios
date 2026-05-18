@@ -49,7 +49,26 @@ export default function Home() {
     });
 
     return () => subscription.unsubscribe();
-  }, [router]);  useEffect(() => {
+  }, [router]);  const handlePairing = async () => {
+    if (!session) return;
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://helios-2-0.onrender.com";
+      const res = await fetch(`${apiUrl}/api/pairing/generate`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+      const data = await res.json();
+      if (data.code) {
+        setPairingCode(data.code);
+      }
+    } catch (err) {
+      console.error("Failed to generate pairing code:", err);
+    }
+  };
+
+  useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchMachine = async () => {
       if (!session) return;
@@ -70,27 +89,6 @@ export default function Home() {
       }
     };
 
-    const handlePairing = async () => {
-      if (!session) return;
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://helios-2-0.onrender.com";
-        const res = await fetch(`${apiUrl}/api/pairing/generate`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`
-          }
-        });
-        const data = await res.json();
-        if (data.code) {
-          setPairingCode(data.code);
-        }
-      } catch (err) {
-        console.error("Failed to generate pairing code:", err);
-      }
-    };
-    
-    // Attach pair function to window so we can trigger it from UI below
-    (window as any).triggerPairing = handlePairing;
     if (!machineId) {
       fetchMachine();
       interval = setInterval(fetchMachine, 5000);
@@ -98,7 +96,7 @@ export default function Home() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [machineId]);
+  }, [machineId, session]);
 
   useEffect(() => {
     if (!machineId || !session) return;
@@ -162,21 +160,30 @@ export default function Home() {
         </header>
 
         {pairingCode && (
-          <div className="mb-6 p-4 glass-panel border border-[var(--color-brand-purple)]/50 rounded-xl relative flex justify-between items-center bg-[var(--color-brand-purple)]/10">
-            <div>
-              <h3 className="text-white font-semibold text-sm">Pair New Device</h3>
-              <p className="text-xs text-[#94a3b8] mt-1">Run the Helios Connector on your device and enter this code:</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="bg-black/40 px-4 py-2 rounded-lg border border-[var(--color-brand-purple)] text-[var(--color-brand-purple-glow)] font-mono text-xl tracking-widest font-bold">
-                {pairingCode}
+          <div className="mb-6 p-4 md:p-6 glass-panel border border-[var(--color-brand-purple)]/50 rounded-xl relative bg-[var(--color-brand-purple)]/10">
+            <button 
+              onClick={() => setPairingCode(null)}
+              className="absolute top-4 right-4 text-[#94a3b8] hover:text-white transition-colors"
+            >
+              ✕
+            </button>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div className="flex-1">
+                <h3 className="text-white font-bold text-lg mb-2">Pair New Device (Windows Only)</h3>
+                <ol className="text-sm text-[#cbd5e1] list-decimal list-inside space-y-2">
+                  <li>Download the <a href="/HeliosConnector.exe" download className="text-[var(--color-brand-purple-glow)] hover:underline font-semibold">Helios Connector</a> executable.</li>
+                  <li>Run the downloaded <code className="bg-black/30 px-1 py-0.5 rounded text-[var(--color-brand-purple-glow)]">HeliosConnector.exe</code> file.</li>
+                  <li>If Windows SmartScreen appears, click <strong className="text-white">"More info"</strong> and then <strong className="text-white">"Run anyway"</strong>.</li>
+                  <li>When prompted in the terminal, enter the pairing code shown on the right.</li>
+                  <li>Keep the terminal open to continuously send telemetry data.</li>
+                </ol>
               </div>
-              <button 
-                onClick={() => setPairingCode(null)}
-                className="text-[#94a3b8] hover:text-white transition-colors"
-              >
-                ✕
-              </button>
+              <div className="flex flex-col items-center gap-2 bg-black/40 p-4 rounded-xl border border-[var(--color-brand-purple)]/50 min-w-[200px]">
+                <span className="text-xs text-[#94a3b8] font-semibold tracking-wider">YOUR PAIRING CODE</span>
+                <div className="text-[var(--color-brand-purple-glow)] font-mono text-3xl tracking-[0.2em] font-bold">
+                  {pairingCode}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -193,7 +200,7 @@ export default function Home() {
               </button>
             ))}
             <button
-              onClick={() => (window as any).triggerPairing?.()}
+              onClick={handlePairing}
               className="px-4 py-2 rounded-lg text-xs font-semibold transition-all glass-panel text-[#94a3b8] border-transparent hover:text-white flex items-center gap-2"
             >
               + Pair New Device
@@ -204,7 +211,7 @@ export default function Home() {
             <h3 className="text-white font-medium mb-2">No devices connected</h3>
             <p className="text-sm text-[#94a3b8] mb-4">You need to pair a machine to see telemetry.</p>
             <button
-              onClick={() => (window as any).triggerPairing?.()}
+              onClick={handlePairing}
               className="bg-[var(--color-brand-purple)] hover:bg-[#a855f7] text-white px-6 py-2 rounded-full text-sm font-semibold transition-colors"
             >
               Pair New Device
