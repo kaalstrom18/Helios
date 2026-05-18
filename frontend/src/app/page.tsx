@@ -54,7 +54,7 @@ export default function Home() {
     const fetchMachine = async () => {
       if (!session) return;
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://helios-ui43.onrender.com";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://helios-2-0.onrender.com";
         const res = await fetch(`${apiUrl}/api/machines`, {
           headers: {
             Authorization: `Bearer ${session.access_token}`
@@ -73,7 +73,7 @@ export default function Home() {
     const handlePairing = async () => {
       if (!session) return;
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://helios-ui43.onrender.com";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://helios-2-0.onrender.com";
         const res = await fetch(`${apiUrl}/api/pairing/generate`, {
           method: "POST",
           headers: {
@@ -106,7 +106,7 @@ export default function Home() {
     // Use NEXT_PUBLIC_WS_URL for production (e.g. wss://api.helios.com/ws/telemetry)
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL 
       ? `${process.env.NEXT_PUBLIC_WS_URL}/${machineId}?token=${session.access_token}`
-      : `wss://helios-ui43.onrender.com/ws/telemetry/${machineId}?token=${session.access_token}`;
+      : `wss://helios-2-0.onrender.com/ws/telemetry/${machineId}?token=${session.access_token}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => setConnected(true);

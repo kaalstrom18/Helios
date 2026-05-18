@@ -6,7 +6,7 @@ import json
 from telemetry import get_telemetry, get_recent_logs
 
 # Updated API URLs for Render
-BASE_URL = "https://helios-ui43.onrender.com"
+BASE_URL = "https://helios-2-0.onrender.com"
 API_URL = f"{BASE_URL}/api/telemetry"
 LINK_URL = f"{BASE_URL}/api/pairing/link"
 SYNC_INTERVAL = 5 # Sync every 5 seconds for the MVP

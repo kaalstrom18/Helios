@@ -43,7 +43,7 @@ We use Render's "Web Service" to deploy the FastAPI application.
    - `SUPABASE_KEY`: Your Supabase Anon Key
    - `GEMINI_API_KEY`: Your Google Gemini API Key
 
-7. Click **Deploy**. Render will build and host your backend. Note your Render app URL (e.g., `https://helios-ui43.onrender.com`).
+7. Click **Deploy**. Render will build and host your backend. Note your Render app URL (e.g., `https://helios-2-0.onrender.com`).
 
 ---
 
