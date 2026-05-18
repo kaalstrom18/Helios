@@ -38,7 +38,7 @@ We use Render's "Web Service" to deploy the FastAPI application.
    uvicorn main:app --host 0.0.0.0 --port $PORT
    ```
 6. **Environment Variables**: Add the following securely in the Render dashboard:
-   - `DATABASE_URL`: `postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT].supabase.co:5432/postgres`
+   - `DATABASE_URL`: Your Supabase Connection Pooler string (e.g., `postgresql://postgres.[YOUR-PROJECT]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres`). *Note: You MUST use the Transaction Pooler URL because Render does not support outbound IPv6 which is now required for Supabase direct connections.*
    - `SUPABASE_URL`: Your Supabase Project URL
    - `SUPABASE_KEY`: Your Supabase Anon Key
    - `GEMINI_API_KEY`: Your Google Gemini API Key
