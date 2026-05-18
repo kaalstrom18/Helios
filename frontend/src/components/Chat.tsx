@@ -16,7 +16,7 @@ export default function Chat({ machineId }: { machineId?: string | null }) {
     setResponse(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://helios-2-0.onrender.com";
       const res = await fetch(`${apiUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
