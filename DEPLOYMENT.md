@@ -19,7 +19,7 @@ Since Helios relies on Supabase for both identity management and PostgreSQL stor
 2. Once provisioned, find your **Project URL** and **Anon Key** in `Project Settings -> API`.
 3. Find your **Database Connection String** in `Project Settings -> Database`.
 4. Enable **Email Auth**: Go to `Authentication -> Providers` and make sure Email is enabled.
-
+5. Set your **Site URL**: Go to `Authentication -> URL Configuration`. Change the default `http://localhost:3000` to your deployed Netlify URL (e.g., `https://your-netlify-site.netlify.app`). This is crucial so email confirmation links redirect to your live app instead of localhost!
 ---
 
 ## 3. Backend Deployment (Render)
