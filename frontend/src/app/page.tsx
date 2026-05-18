@@ -134,7 +134,7 @@ export default function Home() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-8 pb-4 md:pb-6 border-b border-[var(--color-brand-border)]">
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-2">
-              <span className="text-glow-purple text-[var(--color-brand-purple-glow)]">Helios</span> AI
+              <span className="text-glow-purple text-[var(--color-brand-purple-glow)]">Helios</span> AI Demo
             </h1>
             <p className="text-sm text-[#94a3b8] mt-1 font-medium">EVENT DASHBOARD</p>
           </div>
