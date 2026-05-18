@@ -25,6 +25,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "Helios API is running"}
+
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, List[WebSocket]] = {}
@@ -127,11 +132,14 @@ async def receive_telemetry(payload: TelemetryPayload, machine_token: str = Head
     if not machine:
         raise HTTPException(status_code=401, detail="Invalid Machine-Token or machine_id")
 
+    # Clean NUL bytes from logs to prevent PostgreSQL errors
+    clean_logs = payload.logs.replace("\x00", "") if payload.logs else None
+
     # Store in database
     db_snapshot = TelemetrySnapshot(
         machine_id=payload.machine_id,
         data=payload.telemetry,
-        system_logs=payload.logs
+        system_logs=clean_logs
     )
     db.add(db_snapshot)
     db.commit()
